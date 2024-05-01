@@ -1,0 +1,38 @@
+
+# Verifiers
+
+Verifiers can use our API to download the contracts for Issuers at our [Credentials list page](https://whisper-key-ui.onrender.com/whisper-key/credentials). Click on a credential name to download the contract filename
+You can then build your verification contact based on the data in the struct object named with the format *[Credential Name]Entity*.
+
+For example if you download a credential named Passport you will find a struct called *PassportEntity*.
+
+This object contains the data you can use in your verification contract. On that same page you will find the **Issuer** address that can be used to prove the issuer of the credential.
+An example contract can be seen below.
+
+```ts filename="ValidPassportCheck.ts" {3} copy
+export class ValidPassportCheck extends SmartContract {
+   @state(PublicKey) oraclePublicKey = State<PublicKey>();
+   @state(PublicKey) issuerPublicKey = State<PublicKey>();
+
+  init() {
+    super.init();
+    this.requireSignature();
+  }
+  @method initState(oracleKey: PublicKey, issuerPublicKey: PublicKey) {
+    this.oraclePublicKey.set(oracleKey);
+    this.issuerPublicKey.set(issuerPublicKey);
+  }
+
+  @method verify(passportNumber: Field, issuer: PublicKey, owner: PublicKey, oracleSignature: Signature) {
+    const oracle = this.oraclePublicKey.getAndAssertEquals();
+    // determine how to verify the signature
+    const validSignature = oracleSignature.verify(oracle, [passportNumber].concat(expiryDate.toFields()).concat(owner.toFields()));
+    validSignature.assertTrue();
+    // verify the issuer
+    const localIssuer = this.issuerPublicKey.getAndAssertEquals();
+    localIssuer.assertEquals(issuer);
+    ...
+
+  }
+}
+```
